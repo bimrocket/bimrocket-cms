@@ -55,14 +55,18 @@ public class ResourceServlet extends HttpServlet
   public static final String DATA_PATH_NAME = "dataPathName";
   public static final String RESOURCE_CACHE_SIZE = "resourceCacheSize";
 
+  public static final String PRO_SITE = "pro";
+  public static final String DEV_SITE = "dev";
+
   public static final int DEFAULT_RESOURCE_CACHE_SIZE = 1000;
 
-  Site site;
+  Site proSite;
+  Site devSite;
 
   @Override
-  public void init(ServletConfig config) throws ServletException
+  public void init(ServletConfig servletConfig) throws ServletException
   {
-    ServletContext servletContext = config.getServletContext();
+    ServletContext servletContext = servletConfig.getServletContext();
     String baseDir = System.getProperty("bimrocket.cms." + BASE_DIR);
     if (baseDir == null)
     {
@@ -75,26 +79,39 @@ public class ResourceServlet extends HttpServlet
 
     try
     {
-      Files.createDirectories(Path.of(baseDir));
-      servletContext.log("CMS baseDir: %s".formatted(baseDir));
-
       String sizeText = servletContext.getInitParameter(RESOURCE_CACHE_SIZE);
       int size = sizeText == null ?
         DEFAULT_RESOURCE_CACHE_SIZE : Integer.parseInt(sizeText);
 
-      site = new Site(baseDir, size);
+      SiteConfig config  = new SiteConfig();
 
       String includesPathName = servletContext.getInitParameter(INCLUDES_PATH_NAME);
       if (includesPathName != null)
       {
-        site.setIncludesPathName(includesPathName);
+        config.setIncludesPathName(includesPathName);
       }
 
       String dataPathName = servletContext.getInitParameter(DATA_PATH_NAME);
       if (dataPathName != null)
       {
-        site.setDataPathName(dataPathName);
+        config.setDataPathName(dataPathName);
       }
+
+      servletContext.log("CMS baseDir: %s".formatted(baseDir));
+
+      String proBaseDir = baseDir + "/" + PRO_SITE;
+      String devBaseDir = baseDir + "/" + DEV_SITE;
+
+      Files.createDirectories(Path.of(proBaseDir));
+      Files.createDirectories(Path.of(devBaseDir));
+
+      proSite = new Site(PRO_SITE, proBaseDir, config, size);
+      servletContext.log(
+        "PRO site created in %s".formatted(baseDir + PRO_SITE));
+
+      devSite = new Site(DEV_SITE, devBaseDir, config, size);
+      servletContext.log(
+        "DEV site created in %s".formatted(baseDir + DEV_SITE));
     }
     catch (Exception ex)
     {
@@ -106,6 +123,12 @@ public class ResourceServlet extends HttpServlet
   protected void doGet(HttpServletRequest req, HttpServletResponse resp)
     throws ServletException, IOException
   {
+    String siteName = (String)req.getParameter("site");
+    if (siteName != null)
+    {
+      req.getSession().setAttribute("site", siteName);
+    }
+
     String resourcePathName = getResourcePathName(req);
 
     if (resourcePathName.startsWith("_"))
@@ -114,9 +137,12 @@ public class ResourceServlet extends HttpServlet
       return;
     }
 
+    Site site = getSite(req);
+
     if (resourcePathName.length() == 0)
     {
-      resp.sendRedirect(req.getContextPath() + "/" + site.getDefaultFileName());
+      resp.sendRedirect(req.getContextPath() + "/" +
+        site.config.getDefaultFileName());
       return;
     }
 
@@ -129,6 +155,19 @@ public class ResourceServlet extends HttpServlet
     }
 
     resource.send(req, resp);
+  }
+
+  Site getSite(HttpServletRequest req)
+  {
+    String siteName = (String)req.getSession().getAttribute("site");
+    if ("dev".equals(siteName))
+    {
+      return devSite;
+    }
+    else
+    {
+      return proSite;
+    }
   }
 
   String getResourcePathName(HttpServletRequest req)

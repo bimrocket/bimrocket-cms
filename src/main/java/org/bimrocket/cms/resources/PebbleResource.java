@@ -40,6 +40,7 @@ import java.io.StringWriter;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import org.bimrocket.cms.SiteConfig;
 import org.yaml.snakeyaml.Yaml;
 
 /**
@@ -83,7 +84,8 @@ public abstract class PebbleResource extends Resource
     if (layout != null)
     {
       context.put(CONTENT, content);
-      String layoutPathName = site.getIncludesPathName() + "/" + layout;
+      SiteConfig config = site.getConfig();
+      String layoutPathName = config.getIncludesPathName() + "/" + layout;
       PebbleTemplate layoutTemplate = getEngine().getTemplate(layoutPathName);
       writer = new StringWriter();
       layoutTemplate.evaluate(writer, context);

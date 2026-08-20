@@ -48,77 +48,34 @@ import org.bimrocket.cms.resources.DataResource;
  */
 public class Site
 {
-  String defaultFileName = "index";
-  String[] templateTypes = new String[]{ "html", "md", "htm", "njk", "peb" };
-  String[] dataTypes = new String[]{ "yaml", "yml" };
-
-  ContentLoader loader;
-
-  String includesPathName = "_includes";
-  String dataPathName = "_data";
+  final String name;
+  final SiteConfig config;
+  final ContentLoader loader;
 
   final Map<String, Resource> resourceCache;
   final Map<String, Object> internalData = new ConcurrentHashMap<>();
 
-  public Site(String baseDir)
+  public Site(String name, String baseDir, SiteConfig config)
   {
-    this(baseDir, 100);
+    this(name, baseDir, config, 100);
   }
 
-  public Site(String baseDir, int size)
+  public Site(String name, String baseDir, SiteConfig config, int size)
   {
+    this.name = name;
+    this.config = config;
     this.loader = new ContentLoader(baseDir);
     resourceCache = Collections.synchronizedMap(new LRUMap<>(size));
   }
 
-  public String getIncludesPathName()
+  public String getName()
   {
-    return includesPathName;
+    return name;
   }
 
-  public void setIncludesPathName(String includePathName)
+  public SiteConfig getConfig()
   {
-    this.includesPathName = includePathName;
-  }
-
-  public String getDataPathName()
-  {
-    return dataPathName;
-  }
-
-  public void setDataPathName(String dataPathName)
-  {
-    this.dataPathName = dataPathName;
-  }
-
-  public String getDefaultFileName()
-  {
-    return defaultFileName;
-  }
-
-  public void setDefaultFileName(String defaultFileName)
-  {
-    this.defaultFileName = defaultFileName;
-  }
-
-  public String[] getTemplateTypes()
-  {
-    return templateTypes;
-  }
-
-  public void setTemplateTypes(String[] templateTypes)
-  {
-    this.templateTypes = templateTypes;
-  }
-
-  public String[] getDataTypes()
-  {
-    return dataTypes;
-  }
-
-  public void setDataTypes(String[] dataTypes)
-  {
-    this.dataTypes = dataTypes;
+    return config;
   }
 
   public ContentLoader getLoader()
@@ -134,6 +91,7 @@ public class Site
   public Map<String, Object> getData() throws IOException
   {
     Map<String, Object> data = new HashMap<>();
+    String dataPathName = config.getDataPathName();
     List<String> childNames = loader.getChildNames(dataPathName);
     for (String childName : childNames)
     {
@@ -148,7 +106,7 @@ public class Site
 
   public Resource getResource(String pathName)
   {
-    return getResource(pathName, templateTypes);
+    return getResource(pathName, config.getTemplateTypes());
   }
 
   public Resource getResource(String pathName, String[] fileTypes)
