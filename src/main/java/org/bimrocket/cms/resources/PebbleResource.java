@@ -152,10 +152,13 @@ public abstract class PebbleResource extends Resource
       context.putAll(properties);
     }
 
+    boolean isWebmaster = req.getSession().getAttribute("webmaster") != null;
+
     context.put("contextPath", req.getContextPath());
     context.put("site", site);
     context.put("resource", this);
     context.put("data", site.getData());
+    context.put("webmaster", isWebmaster);
 
     return context;
   }

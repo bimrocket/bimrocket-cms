@@ -39,6 +39,7 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import static jakarta.servlet.http.HttpServletResponse.SC_NOT_FOUND;
+import jakarta.servlet.http.HttpSession;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -51,9 +52,12 @@ import java.nio.file.Path;
 public class ResourceServlet extends HttpServlet
 {
   public static final String BASE_DIR = "baseDir";
+  public static final String ACCESS_KEY = "accessKey";
   public static final String INCLUDES_PATH_NAME = "includesPathName";
   public static final String DATA_PATH_NAME = "dataPathName";
   public static final String RESOURCE_CACHE_SIZE = "resourceCacheSize";
+
+  public static final String KEY_PARAM = "key";
 
   public static final String PRO_SITE = "pro";
   public static final String DEV_SITE = "dev";
@@ -62,6 +66,8 @@ public class ResourceServlet extends HttpServlet
 
   Site proSite;
   Site devSite;
+
+  String accessKey;
 
   @Override
   public void init(ServletConfig servletConfig) throws ServletException
@@ -76,6 +82,9 @@ public class ResourceServlet extends HttpServlet
         baseDir = getDefaultBaseDir();
       }
     }
+
+    accessKey = System.getProperty("bimrocket.cms." + ACCESS_KEY);
+    if (accessKey == null) accessKey = "changeme";
 
     try
     {
@@ -123,10 +132,31 @@ public class ResourceServlet extends HttpServlet
   protected void doGet(HttpServletRequest req, HttpServletResponse resp)
     throws ServletException, IOException
   {
+    HttpSession session = req.getSession();
+
+    String key = (String)req.getParameter(KEY_PARAM);
+
+    if (accessKey != null && accessKey.equals(key))
+    {
+      session.setAttribute("webmaster", "true");
+    }
+
     String siteName = (String)req.getParameter("site");
     if (siteName != null)
     {
-      req.getSession().setAttribute("site", siteName);
+      if (session.getAttribute("webmaster") != null)
+      {
+        if (PRO_SITE.equals(siteName) || DEV_SITE.equals(siteName))
+        {
+          session.setAttribute("site", siteName);
+        }
+      }
+    }
+
+    if (key != null)
+    {
+      resp.sendRedirect(req.getContextPath() + "/");
+      return;
     }
 
     String resourcePathName = getResourcePathName(req);
@@ -160,7 +190,7 @@ public class ResourceServlet extends HttpServlet
   Site getSite(HttpServletRequest req)
   {
     String siteName = (String)req.getSession().getAttribute("site");
-    if ("dev".equals(siteName))
+    if (DEV_SITE.equals(siteName))
     {
       return devSite;
     }
