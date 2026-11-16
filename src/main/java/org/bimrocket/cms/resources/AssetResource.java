@@ -67,6 +67,8 @@ public class AssetResource extends Resource
       resp.setHeader("ETag", actualETag);
       resp.setHeader("Cache-Control", "max-age=0, must-revalidate");
       resp.setDateHeader("Last-Modified", lastModified);
+      size = site.getLoader().getSize(pathName);
+      resp.setContentLength((int)size);
       site.getLoader().copyResource(pathName, resp.getOutputStream());
     }
   }
