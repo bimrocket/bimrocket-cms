@@ -43,6 +43,9 @@ import jakarta.servlet.http.HttpSession;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 
 /**
  *
@@ -52,7 +55,6 @@ import java.nio.file.Path;
 public class ResourceServlet extends HttpServlet
 {
   public static final String BASE_DIR = "baseDir";
-  public static final String ACCESS_KEY = "accessKey";
   public static final String INCLUDES_PATH_NAME = "includesPathName";
   public static final String DATA_PATH_NAME = "dataPathName";
   public static final String RESOURCE_CACHE_SIZE = "resourceCacheSize";
@@ -67,8 +69,6 @@ public class ResourceServlet extends HttpServlet
   Site proSite;
   Site devSite;
 
-  String accessKey;
-
   @Override
   public void init(ServletConfig servletConfig) throws ServletException
   {
@@ -82,9 +82,6 @@ public class ResourceServlet extends HttpServlet
         baseDir = getDefaultBaseDir();
       }
     }
-
-    accessKey = System.getProperty("bimrocket.cms." + ACCESS_KEY);
-    if (accessKey == null) accessKey = "changeme";
 
     try
     {
@@ -116,11 +113,11 @@ public class ResourceServlet extends HttpServlet
 
       proSite = new Site(PRO_SITE, proBaseDir, config, size);
       servletContext.log(
-        "PRO site created in %s".formatted(baseDir + PRO_SITE));
+        "PRO site created in %s".formatted(proBaseDir));
 
       devSite = new Site(DEV_SITE, devBaseDir, config, size);
       servletContext.log(
-        "DEV site created in %s".formatted(baseDir + DEV_SITE));
+        "DEV site created in %s".formatted(devBaseDir));
     }
     catch (Exception ex)
     {
@@ -135,10 +132,21 @@ public class ResourceServlet extends HttpServlet
     HttpSession session = req.getSession();
 
     String key = (String)req.getParameter(KEY_PARAM);
-
-    if (accessKey != null && accessKey.equals(key))
+    if (key != null)
     {
-      session.setAttribute("webmaster", "true");
+      Map<String, Object> siteProperties =
+        (Map<String, Object>)devSite.getData().getOrDefault("site", null);
+
+      if (siteProperties != null)
+      {
+        List<String> keys = (List<String>)siteProperties
+          .getOrDefault("keys", Collections.EMPTY_LIST);
+
+        if (keys.contains(key))
+        {
+          session.setAttribute("webmaster", "true");
+        }
+      }
     }
 
     String siteName = (String)req.getParameter("site");
